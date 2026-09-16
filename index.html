@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tijera y Pegamento — cut-up de letras</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500;600&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c1b19;
+    --paper:#efe8d6;
+    --paper-dark:#d9cca4;
+    --stamp:#c23b22;
+    --tape:#e7d9a8;
+    --muted:#7a7263;
+    --line:#3a362f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--ink);
+    background-image:
+      radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 4px 4px;
+    color:var(--paper);
+    font-family:'IBM Plex Mono', monospace;
+    min-height:100vh;
+    padding:32px 16px 80px;
+  }
+  .wrap{max-width:680px;margin:0 auto;}
+
+  header{margin-bottom:28px;}
+  h1{
+    font-family:'Anton', sans-serif;
+    font-weight:400;
+    font-size:clamp(2.2rem, 8vw, 3.4rem);
+    line-height:0.95;
+    letter-spacing:0.5px;
+    margin:0 0 6px;
+    color:var(--paper);
+    text-shadow: 3px 3px 0 var(--stamp);
+  }
+  header p{
+    margin:0;
+    color:var(--paper-dark);
+    font-size:0.92rem;
+    max-width:46ch;
+  }
+
+  section{margin-top:34px;}
+  .label{
+    font-size:0.75rem;
+    color:var(--paper-dark);
+    margin-bottom:10px;
+    display:block;
+  }
+
+  .searchbar{
+    display:flex;
+    gap:8px;
+  }
+  input[type=text]{
+    flex:1;
+    background:var(--paper);
+    color:var(--ink);
+    border:none;
+    padding:12px 14px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.95rem;
+    outline:none;
+  }
+  input[type=text]:focus{box-shadow:0 0 0 2px var(--stamp);}
+  button{
+    font-family:'IBM Plex Mono', monospace;
+    cursor:pointer;
+    border:none;
+  }
+  .btn-search{
+    background:var(--ink);
+    color:var(--paper);
+    border:1px solid var(--paper-dark);
+    padding:12px 18px;
+    font-size:0.85rem;
+  }
+  .btn-search:hover{background:#2c2a25;}
+
+  #results{
+    margin-top:14px;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .result-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:rgba(239,232,214,0.06);
+    padding:8px 10px;
+  }
+  .result-row img{width:40px;height:40px;display:block;filter:grayscale(30%);}
+  .result-info{flex:1;min-width:0;}
+  .result-info .t{font-size:0.88rem;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .result-info .a{font-size:0.75rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .btn-add{
+    background:transparent;
+    color:var(--paper);
+    border:1px solid var(--paper-dark);
+    padding:5px 10px;
+    font-size:0.75rem;
+    flex-shrink:0;
+  }
+  .btn-add:hover{background:var(--stamp);border-color:var(--stamp);}
+  .btn-add:disabled{opacity:0.35;cursor:default;}
+
+  #selected{
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px;
+    margin-top:14px;
+  }
+  .chip{
+    position:relative;
+    background:var(--paper);
+    color:var(--ink);
+    padding:8px 10px 10px;
+    width:132px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+  }
+  .chip::before{
+    content:"";
+    position:absolute;
+    top:-7px;left:50%;
+    transform:translateX(-50%) rotate(-2deg);
+    width:34px;height:14px;
+    background:var(--tape);
+    opacity:0.85;
+  }
+  .chip img{width:100%;height:80px;object-fit:cover;display:block;margin-bottom:6px;filter:sepia(15%);}
+  .chip .swatch{width:10px;height:10px;display:inline-block;margin-right:5px;vertical-align:middle;}
+  .chip .t{font-size:0.72rem;font-weight:600;line-height:1.2;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  .chip .a{font-size:0.65rem;color:var(--muted);margin-top:2px;}
+  .chip .status{font-size:0.63rem;margin-top:6px;color:var(--muted);}
+  .chip .status.err{color:var(--stamp);}
+  .chip .remove{
+    position:absolute;top:2px;right:2px;
+    background:var(--ink);color:var(--paper);
+    width:18px;height:18px;font-size:0.7rem;line-height:18px;text-align:center;
+    cursor:pointer;
+  }
+
+  .stampbtn{
+    display:block;
+    margin:34px auto 0;
+    background:transparent;
+    color:var(--stamp);
+    border:3px solid var(--stamp);
+    border-radius:50%;
+    width:140px;height:140px;
+    font-family:'Anton', sans-serif;
+    font-size:1.15rem;
+    letter-spacing:1px;
+    transform:rotate(-6deg);
+    transition:transform 0.15s ease, background 0.15s ease;
+  }
+  .stampbtn:hover:not(:disabled){transform:rotate(-6deg) scale(1.05); background:rgba(194,59,34,0.08);}
+  .stampbtn:disabled{opacity:0.25;cursor:default;}
+
+  #output{margin-top:36px;display:flex;flex-direction:column;gap:10px;}
+  .stanza{display:flex;flex-direction:column;gap:8px;margin-bottom:6px;}
+  .scrap{
+    position:relative;
+    background:var(--paper);
+    color:var(--ink);
+    padding:10px 14px;
+    font-family:'Caveat', cursive;
+    font-size:1.4rem;
+    line-height:1.15;
+    max-width:92%;
+    box-shadow:0 3px 8px rgba(0,0,0,0.35);
+    opacity:0;
+    animation:drop 0.45s ease forwards;
+  }
+  .scrap .tag{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.6rem;
+    color:var(--muted);
+    margin-top:3px;
+  }
+  @keyframes drop{
+    from{opacity:0; transform:translateY(-10px) rotate(0deg);}
+    to{opacity:1; transform:translateY(0) rotate(var(--r, -1deg));}
+  }
+
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px;font-size:0.7rem;color:var(--paper-dark);}
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .legend i{width:9px;height:9px;display:inline-block;}
+
+  .empty, .hint{color:var(--muted);font-size:0.85rem;}
+  .actions-row{display:flex;gap:10px;justify-content:center;margin-top:16px;}
+  .btn-ghost{background:transparent;color:var(--paper-dark);border:1px solid var(--line);padding:8px 14px;font-size:0.78rem;}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--paper-dark);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>TIJERA Y<br>PEGAMENTO</h1>
+    <p>Busca canciones, elige varias y corta sus versos para pegarlos en una letra nueva. Sin IA: solo sílabas, rimas y unas tijeras.</p>
+  </header>
+
+  <section>
+    <span class="label">01 — BUSCAR CANCIÓN</span>
+    <div class="searchbar">
+      <input type="text" id="q" placeholder="artista o título…" autocomplete="off">
+      <button class="btn-search" id="searchBtn">buscar</button>
+    </div>
+    <div id="results"></div>
+  </section>
+
+  <section>
+    <span class="label">02 — RECORTES ELEGIDOS</span>
+    <div id="selected"></div>
+    <p class="empty" id="emptyMsg">Todavía no has añadido ninguna canción.</p>
+  </section>
+
+  <button class="stampbtn" id="genBtn" disabled>GENERAR</button>
+
+  <section>
+    <div id="output"></div>
+    <div class="actions-row" id="actionsRow" style="display:none;">
+      <button class="btn-ghost" id="regenBtn">↻ otra vez</button>
+    </div>
+    <div class="legend" id="legend"></div>
+  </section>
+</div>
+
+<script>
+const COLORS = ['#e07a5f','#81b29a','#f2cc8f','#8093f1','#c9ada7','#6a994e','#e5989b','#a682ff'];
+let selected = []; // {id, title, artist, artwork, status, allLines: [], color}
+let colorIdx = 0;
+
+const resultsEl = document.getElementById('results');
+const selectedEl = document.getElementById('selected');
+const emptyMsg = document.getElementById('emptyMsg');
+const genBtn = document.getElementById('genBtn');
+const outputEl = document.getElementById('output');
+const legendEl = document.getElementById('legend');
+const actionsRow = document.getElementById('actionsRow');
+
+document.getElementById('searchBtn').addEventListener('click', doSearch);
+document.getElementById('q').addEventListener('keydown', e => { if(e.key==='Enter') doSearch(); });
+genBtn.addEventListener('click', () => generate());
+document.getElementById('regenBtn').addEventListener('click', () => generate());
+
+async function doSearch(){
+  const term = document.getElementById('q').value.trim();
+  if(!term) return;
+  resultsEl.innerHTML = '<p class="hint">buscando…</p>';
+  try{
+    const url = 'https://itunes.apple.com/search?media=music&entity=song&limit=10&term=' + encodeURIComponent(term);
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    renderResults(data.results || []);
+  }catch(err){
+    console.error('Error de búsqueda:', err);
+    const isFileProtocol = location.protocol === 'file:';
+    resultsEl.innerHTML =
+      '<p class="hint">no se pudo buscar (' + escapeHtml(err.message) + ').' +
+      (isFileProtocol
+        ? ' Estás abriendo el archivo directamente (file://); ejecuta <code>python3 -m http.server 8000</code> en esta carpeta y abre http://localhost:8000/ en su lugar.'
+        : ' Revisa la consola del navegador (F12) para más detalle.') +
+      '</p>';
+  }
+}
+
+function renderResults(list){
+  if(list.length === 0){ resultsEl.innerHTML = '<p class="hint">sin resultados.</p>'; return; }
+  resultsEl.innerHTML = '';
+  list.forEach(item => {
+    const already = selected.some(s => s.id === item.trackId);
+    const row = document.createElement('div');
+    row.className = 'result-row';
+    row.innerHTML = `
+      <img src="${item.artworkUrl60 || ''}" alt="">
+      <div class="result-info">
+        <div class="t">${escapeHtml(item.trackName || '')}</div>
+        <div class="a">${escapeHtml(item.artistName || '')}</div>
+      </div>
+      <button class="btn-add" ${already ? 'disabled' : ''}>${already ? 'añadida' : '+ añadir'}</button>
+    `;
+    row.querySelector('.btn-add').addEventListener('click', () => addSong(item));
+    resultsEl.appendChild(row);
+  });
+}
+
+function addSong(item){
+  if(selected.some(s => s.id === item.trackId)) return;
+  const song = {
+    id: item.trackId,
+    title: item.trackName,
+    artist: item.artistName,
+    artwork: item.artworkUrl100 || item.artworkUrl60 || '',
+    status: 'loading',
+    allLines: [],
+    color: COLORS[colorIdx % COLORS.length]
+  };
+  colorIdx++;
+  selected.push(song);
+  renderSelected();
+  doSearch(); // refresh results to disable the button
+  fetchLyrics(song);
+}
+
+function removeSong(id){
+  selected = selected.filter(s => s.id !== id);
+  renderSelected();
+  updateGenBtn();
+}
+
+async function fetchLyrics(song){
+  try{
+    const url = 'https://api.lyrics.ovh/v1/' + encodeURIComponent(song.artist) + '/' + encodeURIComponent(song.title);
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('not found');
+    const data = await res.json();
+    const raw = (data.lyrics || '').replace(/\\r/g, '');
+    const lines = processLyrics(raw);
+    if(lines.length < 3) throw new Error('too few lines');
+    song.allLines = lines;
+    song.status = 'ready';
+  }catch(err){
+    song.status = 'error';
+  }
+  renderSelected();
+  updateGenBtn();
+}
+
+function processLyrics(raw){
+  const seen = new Set();
+  return raw.split('\\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 0)
+    .filter(l => !/^\\[.*\\]$/.test(l))
+    .filter(l => !/paroles?|lyrics? provided|traduction/i.test(l))
+    .filter(l => {
+      const words = l.split(/\\s+/).length;
+      return words >= 2 && words <= 12;
+    })
+    .filter(l => {
+      const key = l.toLowerCase();
+      if(seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map(text => ({
+      text,
+      syll: lineSyllables(text),
+      rhyme: rhymeKey(text)
+    }));
+}
+
+function renderSelected(){
+  emptyMsg.style.display = selected.length ? 'none' : 'block';
+  selectedEl.innerHTML = '';
+  selected.forEach(s => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    let statusText = '';
+    if(s.status === 'loading') statusText = 'cargando letra…';
+    else if(s.status === 'ready') statusText = s.allLines.length + ' versos listos';
+    else statusText = 'letra no encontrada';
+    chip.innerHTML = `
+      <div class="remove">✕</div>
+      <img src="${s.artwork}" alt="">
+      <div class="t"><span class="swatch" style="background:${s.color}"></span>${escapeHtml(s.title)}</div>
+      <div class="a">${escapeHtml(s.artist)}</div>
+      <div class="status ${s.status === 'error' ? 'err' : ''}">${statusText}</div>
+    `;
+    chip.querySelector('.remove').addEventListener('click', () => removeSong(s.id));
+    selectedEl.appendChild(chip);
+  });
+}
+
+function updateGenBtn(){
+  const ready = selected.filter(s => s.status === 'ready');
+  genBtn.disabled = ready.length < 2;
+}
+
+// ---------- syllable + rhyme helpers ----------
+function syllablesInWord(word){
+  const w = word.toLowerCase().replace(/[^a-záéíóúüñ]/gi, '');
+  if(!w) return 0;
+  const matches = w.match(/[aeiouáéíóúü]+/g);
+  return matches ? matches.length : 1;
+}
+function lineSyllables(line){
+  return line.split(/\\s+/).reduce((sum, w) => sum + Math.max(syllablesInWord(w), 1), 0);
+}
+function rhymeKey(line){
+  const words = line.toLowerCase().replace(/[^a-záéíóúüñ\\s]/gi, '').trim().split(/\\s+/);
+  const last = words[words.length - 1] || '';
+  return last.slice(-3);
+}
+
+// ---------- cut-up generation ----------
+function buildPool(){
+  const pool = [];
+  selected.filter(s => s.status === 'ready').forEach(s => {
+    s.allLines.forEach(l => pool.push({ text: l.text, syll: l.syll, rhyme: l.rhyme, songId: s.id, color: s.color }));
+  });
+  return pool;
+}
+
+function pickBest(pool, opts){
+  let bestIdx = -1, bestScore = Infinity;
+  pool.forEach((cand, i) => {
+    let score = Math.abs(cand.syll - opts.targetSyll);
+    if(opts.excludeSong && cand.songId === opts.excludeSong) score += 6;
+    if(opts.targetRhyme && cand.rhyme === opts.targetRhyme && cand.rhyme.length >= 2) score -= 8;
+    if(score < bestScore){ bestScore = score; bestIdx = i; }
+  });
+  if(bestIdx === -1) return null;
+  return pool.splice(bestIdx, 1)[0];
+}
+
+function generate(){
+  const pool = buildPool();
+  outputEl.innerHTML = '';
+  legendEl.innerHTML = '';
+  if(pool.length < 8){
+    outputEl.innerHTML = '<p class="hint">no hay versos suficientes todavía. añade alguna canción más o espera a que carguen.</p>';
+    actionsRow.style.display = 'none';
+    return;
+  }
+
+  const maxStanzas = Math.min(4, Math.floor(pool.length / 4));
+  const stanzas = [];
+  for(let s = 0; s < maxStanzas; s++){
+    if(pool.length < 4) break;
+    const l1 = pickBest(pool, { targetSyll: 8 });
+    const l2 = pickBest(pool, { excludeSong: l1.songId, targetSyll: l1.syll });
+    const l3 = pickBest(pool, { excludeSong: l2.songId, targetSyll: l2.syll });
+    const l4 = pickBest(pool, { excludeSong: l3.songId, targetSyll: l3.syll, targetRhyme: l2.rhyme });
+    stanzas.push([l1, l2, l3, l4]);
+  }
+
+  stanzas.forEach((stanza, si) => {
+    const div = document.createElement('div');
+    div.className = 'stanza';
+    stanza.forEach((line, li) => {
+      const scrap = document.createElement('div');
+      scrap.className = 'scrap';
+      const rot = (li % 2 === 0 ? -1 : 1) * (1 + Math.random() * 1.5);
+      scrap.style.setProperty('--r', rot.toFixed(1) + 'deg');
+      scrap.style.animationDelay = (si * 0.5 + li * 0.12) + 's';
+      scrap.style.borderLeft = '4px solid ' + line.color;
+      const songName = (selected.find(s => s.id === line.songId) || {}).title || '';
+      scrap.innerHTML = escapeHtml(line.text) + `<span class="tag">— ${escapeHtml(songName)}</span>`;
+      div.appendChild(scrap);
+    });
+    outputEl.appendChild(div);
+  });
+
+  actionsRow.style.display = stanzas.length ? 'flex' : 'none';
+
+  selected.filter(s => s.status === 'ready').forEach(s => {
+    const item = document.createElement('span');
+    item.innerHTML = `<i style="background:${s.color}"></i>${escapeHtml(s.title)} — ${escapeHtml(s.artist)}`;
+    legendEl.appendChild(item);
+  });
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+</script>
+</body>
+</html>
